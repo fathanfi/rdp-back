@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  free
+  premium
+  admin
+}
+
+enum LeadStatus {
+  new
+  contacted
+  won
+  lost
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+}
+
+model User {
+  id               String            @id @default(cuid())
+  name             String
+  email            String            @unique
+  password         String
+  role             UserRole          @default(free)
+  refreshToken     String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  leads            Lead[]
+  payments         Payment[]
+  dashboardMetrics DashboardMetric[]
+}
+
+model Lead {
+  id        String     @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  notes     String?
+  status    LeadStatus @default(new)
+  revenue   Float      @default(0)
+  createdBy String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  userId          String
+  amount          Float
+  status          PaymentStatus @default(pending)
+  stripeSessionId String?
+  createdAt       DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DashboardMetric {
+  id          String   @id @default(cuid())
+  userId      String
+  roas        Float
+  gmv         Float
+  adSpend     Float
+  ctr         Float
+  impressions Int
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
