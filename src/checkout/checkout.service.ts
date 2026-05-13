@@ -19,7 +19,7 @@ import { normalizePlanKey, productIdForPlan } from "./stripe-products";
 @Injectable()
 export class CheckoutService {
   private readonly logger = new Logger(CheckoutService.name);
-  private readonly idempotentAccessCodes = new Map<string, string>();
+  private readonly idempotentAccessCodes = new Map<string, { accessCode: string; email: string; password: string }>();
   private readonly redeemedCodeHashes = new Set<string>();
 
   constructor(
@@ -115,7 +115,7 @@ export class CheckoutService {
 
     const cached = this.idempotentAccessCodes.get(dto.paymentIntentId);
     if (cached) {
-      return { accessCode: cached };
+      return cached;
     }
 
     const pi = await stripe.paymentIntents.retrieve(dto.paymentIntentId);
@@ -146,8 +146,9 @@ export class CheckoutService {
     });
 
     const accessCode = encryptCheckoutPayload(secret, { email: user.email, password });
-    this.idempotentAccessCodes.set(dto.paymentIntentId, accessCode);
-    return { accessCode };
+    const result = { accessCode, email: user.email, password };
+    this.idempotentAccessCodes.set(dto.paymentIntentId, result);
+    return result;
   }
 
   redeemAccessCode(dto: RedeemCodeDto) {
